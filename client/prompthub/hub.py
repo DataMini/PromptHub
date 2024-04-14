@@ -41,19 +41,9 @@ class HTTPClient:
                 raise errors.PromptsHubError(e)
 
 
-class Prompt:
-    def __init__(self, name: str, text: str, output_format: str, model: Optional[str] = None, url: str = None):
-        self.name = name
-        self.text = text
-        self.content = text
-        self.output_format = output_format
-        self.model = model
-        self.url = url
-
-
 class PromptTemplate:
     def __init__(self, id: int, name: str, text: str, output_format: str,
-                 models: List[Dict[str, Any]], labels: List[Dict[str, Any]], url: str):
+                 models: List[Dict[str, Any]], labels: List[Dict[str, Any]], url: str, api_url: str):
         self.id = id
         self.name = name
         self.text = text
@@ -61,7 +51,18 @@ class PromptTemplate:
         self.models = models
         self.labels = labels
         self.url = url
+        self.api_url = api_url
 
+
+class Prompt:
+    def __init__(self, name: str, text: str, output_format: str,
+                 model: Optional[str] = None, template: PromptTemplate = None):
+        self.name = name
+        self.text = text
+        self.content = text
+        self.output_format = output_format
+        self.model = model
+        self.template = template
 
 
 class PromptHub:
@@ -85,7 +86,10 @@ class PromptHub:
         self.category_name = category
         self.category_id = resp[0]['id']
 
-    def make_prompt_url(self, prompt_id: int = None) -> str:
+    def make_prompt_url(self, prompt_id: int) -> str:
+        return f"{self.base_url}/categories/{self.category_id}/prompts/{prompt_id}/"
+
+    def make_prompt_api_url(self, prompt_id: int = None) -> str:
         if prompt_id is None:
             return f"{self.base_url}/api/categories/{self.category_id}/prompts/"
         else:
@@ -119,7 +123,7 @@ class PromptHub:
         model_names = [model['name'] for model in prompt_template.models]
         model = self._get_valid_model(model_names)
         return Prompt(prompt_name, content, prompt_template.output_format, model,
-                      url=prompt_template.url)
+                      template=prompt_template)
 
     def _get_valid_model(self, valid_model_names: List[str]) -> Optional[str]:
         # 从 Prompt 所适用的 Model 列表中获取一个自己最想要的 Model
@@ -139,17 +143,18 @@ class PromptHub:
 
     def get_template(self, prompt_name: str) -> PromptTemplate:
         # uri = f"/api/categories/{self.category_name}/prompts/"
-        prompts = self.get_request(self.make_prompt_url(), {'name': prompt_name})
+        prompts = self.get_request(self.make_prompt_api_url(), {'name': prompt_name})
         if not prompts:
             raise errors.PromptNotFoundError
         prompt_data = prompts[0]
         prompt_data['url'] = self.make_prompt_url(prompt_data['id'])
+        prompt_data['api_url'] = self.make_prompt_api_url(prompt_data['id'])
         return PromptTemplate(**prompt_data)
 
     def create_template(self, name: str, text: str, output_format: str = "str",
                         model_names: List[str] = None, label_names: List[str] = None) -> PromptTemplate:
         resp = self.post_request(
-            self.make_prompt_url(),
+            self.make_prompt_api_url(),
             data={'name': name,
                   'text': text,
                   'output_format': output_format,
@@ -158,8 +163,9 @@ class PromptHub:
                   }
         )
         resp['url'] = self.make_prompt_url(resp['id'])
+        resp['api_url'] = self.make_prompt_api_url(resp['id'])
         return PromptTemplate(**resp)
 
     def delete_template(self, prompt_name: str) -> None:
         template = self.get_template(prompt_name)
-        self.delete_request(template.url)
+        self.delete_request(template.api_url)

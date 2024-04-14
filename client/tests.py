@@ -26,4 +26,5 @@ class TestPromptHub(TestCase):
         prompt = self.hub.get(self.prompt_name)
         template = self.hub.get_template(self.prompt_name)
         print(template.text)
-        print(prompt.url)
+        print(prompt.template.url)
+        print(prompt.template.api_url)
