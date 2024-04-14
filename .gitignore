@@ -98,4 +98,4 @@ static
 viduraenv/
 
 .idea
-tests/
+tests/*
