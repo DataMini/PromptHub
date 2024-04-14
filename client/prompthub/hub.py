@@ -22,13 +22,14 @@ def find_jinja2_variables(template_str):
 class HTTPClient:
     def __init__(self):
         self.session = requests.Session()
+        self.csrf_token = None
 
     def request(self, method: str, url: str, headers: Optional[Dict[str, str]] = None,
                 params: Optional[Dict[str, str]] = None, data=None) -> Any:
         try:
             response = self.session.request(method, url, headers=headers, params=params, data=data)
             response.raise_for_status()
-            return response.json()
+            return response.json() if response.content else None
         except requests.exceptions.ConnectionError:
             raise errors.ConnectionError
         except requests.exceptions.HTTPError as e:
@@ -51,13 +52,16 @@ class Prompt:
 
 
 class PromptTemplate:
-    def __init__(self, name: str, text: str, output_format: str,
-                 models: List[Dict[str, Any]], labels: List[Dict[str, Any]]):
+    def __init__(self, id: int, name: str, text: str, output_format: str,
+                 models: List[Dict[str, Any]], labels: List[Dict[str, Any]], url: str):
+        self.id = id
         self.name = name
         self.text = text
         self.output_format = output_format
         self.models = models
         self.labels = labels
+        self.url = url
+
 
 
 class PromptHub:
@@ -75,45 +79,47 @@ class PromptHub:
         self.preferred_models = ['gpt-3.5', 'gpt-4', 'any']
 
     def set_category(self, category: str) -> None:
-        resp = self.get_request("/api/categories/", {'name': category})
+        resp = self.get_request(f"{self.base_url}/api/categories/", {'name': category})
         if not resp:
             raise errors.CategoryNotFoundError
         self.category_name = category
         self.category_id = resp[0]['id']
 
-    def make_prompt_url(self, prompt_id: int) -> str:
-        return f"{self.base_url}/categories/{self.category_id}/prompts/{prompt_id}/"
+    def make_prompt_url(self, prompt_id: int = None) -> str:
+        if prompt_id is None:
+            return f"{self.base_url}/api/categories/{self.category_id}/prompts/"
+        else:
+            return f"{self.base_url}/api/categories/{self.category_id}/prompts/{prompt_id}/"
 
     def set_preferred_models(self, preferred_models: List[str]) -> None:
         self.preferred_models = [model.lower() for model in preferred_models]
 
-    def get_request(self, uri: str, params=None) -> Any:
-        url = f"{self.base_url}{uri}"
+    def get_request(self, url: str, params=None) -> Any:
         response = self.http_client.request('GET', url, headers=self.headers, params=params)
         return response
 
-    def post_request(self, uri: str, data=None) -> Any:
-        url = f"{self.base_url}{uri}"
+    def post_request(self, url: str, data=None) -> Any:
         response = self.http_client.request('POST', url, headers=self.headers, data=data)
+        return response
+
+    def delete_request(self, url: str) -> Any:
+        response = self.http_client.request('DELETE', url, headers=self.headers)
         return response
 
     def get(self, prompt_name: str, raise_if_missing_variables: bool = True, **variables) -> Prompt:
 
-        uri = f"/api/categories/{self.category_name}/prompts/"
-        prompts = self.get_request(uri, {'name': prompt_name})
-        if not prompts:
-            raise errors.PromptNotFoundError
-        prompt_data = prompts[0]
-        template = Template(prompt_data['text'])
-        missing_variables = [var for var in find_jinja2_variables(prompt_data['text']) if var not in variables]
+        prompt_template = self.get_template(prompt_name)
+
+        template = Template(prompt_template.text)
+        missing_variables = [var for var in find_jinja2_variables(prompt_template.text) if var not in variables]
         if missing_variables and raise_if_missing_variables:
             raise errors.PromptMissingVariablesError(missing_variables)
 
         content = template.render(**variables)
-        model_names = [model['name'] for model in prompt_data['models']]
+        model_names = [model['name'] for model in prompt_template.models]
         model = self._get_valid_model(model_names)
-        return Prompt(prompt_name, content, prompt_data['output_format'], model,
-                      url=self.make_prompt_url(prompt_data['id']))
+        return Prompt(prompt_name, content, prompt_template.output_format, model,
+                      url=prompt_template.url)
 
     def _get_valid_model(self, valid_model_names: List[str]) -> Optional[str]:
         # 从 Prompt 所适用的 Model 列表中获取一个自己最想要的 Model
@@ -132,18 +138,18 @@ class PromptHub:
         return None
 
     def get_template(self, prompt_name: str) -> PromptTemplate:
-        uri = f"/api/categories/{self.category_name}/prompts/"
-        prompts = self.get_request(uri, {'name': prompt_name})
+        # uri = f"/api/categories/{self.category_name}/prompts/"
+        prompts = self.get_request(self.make_prompt_url(), {'name': prompt_name})
         if not prompts:
             raise errors.PromptNotFoundError
         prompt_data = prompts[0]
+        prompt_data['url'] = self.make_prompt_url(prompt_data['id'])
         return PromptTemplate(**prompt_data)
 
     def create_template(self, name: str, text: str, output_format: str = "str",
                         model_names: List[str] = None, label_names: List[str] = None) -> PromptTemplate:
-        uri = f"/api/categories/{self.category_name}/prompts/"
         resp = self.post_request(
-            uri,
+            self.make_prompt_url(),
             data={'name': name,
                   'text': text,
                   'output_format': output_format,
@@ -151,4 +157,9 @@ class PromptHub:
                   'label_names': label_names,
                   }
         )
+        resp['url'] = self.make_prompt_url(resp['id'])
         return PromptTemplate(**resp)
+
+    def delete_template(self, prompt_name: str) -> None:
+        template = self.get_template(prompt_name)
+        self.delete_request(template.url)

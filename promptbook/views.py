@@ -389,6 +389,32 @@ class PromptsListCreateView(generics.ListCreateAPIView):
         return JsonResponse(serializer.data, status=status.HTTP_201_CREATED)
 
 
+class PromptRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = PromptSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    lookup_field = 'id'  # This should be the model's primary key field, typically 'id' or 'pk'
+    lookup_url_kwarg = 'prompt_id'  # This should match the keyword used in the URL pattern
+
+    def get_queryset(self):
+        """
+        This method ensures that the view only handles prompts that exist within the specified category.
+        """
+        category_id = self.kwargs.get('category_id')
+        if category_id:
+            return Prompt.objects.filter(category_id=category_id)
+        return Prompt.objects.none()
+
+    def retrieve(self, request, *args, **kwargs):
+        """
+        Retrieve a specific prompt. Optionally, update 'last_used_at' if the prompt is accessed.
+        """
+        instance = self.get_object()
+        instance.last_used_at = timezone.now()
+        instance.save(update_fields=['last_used_at'])
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
+
+
 
 class LabelListCreateView(generics.ListCreateAPIView):
     queryset = Label.objects.all()
