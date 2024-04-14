@@ -41,12 +41,13 @@ class HTTPClient:
 
 
 class Prompt:
-    def __init__(self, name: str, text: str, output_format: str, model: Optional[str] = None):
+    def __init__(self, name: str, text: str, output_format: str, model: Optional[str] = None, url: str = None):
         self.name = name
         self.text = text
         self.content = text
         self.output_format = output_format
         self.model = model
+        self.url = url
 
 
 class PromptTemplate:
@@ -67,6 +68,7 @@ class PromptHub:
         self.http_client = HTTPClient()
 
         self.category_name = None
+        self.category_id = None
         self.set_category(category)
 
         # 最好是 3.5，其次是 4，如果这两个都没有，则使用任意一个 Prompt 所适用的 Model
@@ -77,6 +79,10 @@ class PromptHub:
         if not resp:
             raise errors.CategoryNotFoundError
         self.category_name = category
+        self.category_id = resp[0]['id']
+
+    def make_prompt_url(self, prompt_id: int) -> str:
+        return f"{self.base_url}/categories/{self.category_id}/prompts/{prompt_id}/"
 
     def set_preferred_models(self, preferred_models: List[str]) -> None:
         self.preferred_models = [model.lower() for model in preferred_models]
@@ -106,7 +112,8 @@ class PromptHub:
         content = template.render(**variables)
         model_names = [model['name'] for model in prompt_data['models']]
         model = self._get_valid_model(model_names)
-        return Prompt(prompt_name, content, prompt_data['output_format'], model)
+        return Prompt(prompt_name, content, prompt_data['output_format'], model,
+                      url=self.make_prompt_url(prompt_data['id']))
 
     def _get_valid_model(self, valid_model_names: List[str]) -> Optional[str]:
         # 从 Prompt 所适用的 Model 列表中获取一个自己最想要的 Model

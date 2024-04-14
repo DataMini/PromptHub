@@ -18,7 +18,7 @@ class PromptSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Prompt
-        fields = ['name', 'text', 'output_format', 'labels', 'models', 'label_names', 'model_names']
+        fields = ['id', 'name', 'text', 'output_format', 'labels', 'models', 'label_names', 'model_names']
 
     def get_labels(self, obj):
         """
@@ -33,7 +33,6 @@ class PromptSerializer(serializers.ModelSerializer):
         return LLMModelSerializer(obj.llm_models.all(), many=True).data
 
     def create(self, validated_data):
-        print('create', validated_data)
         model_names = validated_data.pop('model_names', [])
         label_names = validated_data.pop('label_names', [])
 
