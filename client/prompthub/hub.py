@@ -145,7 +145,7 @@ class PromptHub:
         # uri = f"/api/categories/{self.category_name}/prompts/"
         prompts = self.get_request(self.make_prompt_api_url(), {'name': prompt_name})
         if not prompts:
-            raise errors.PromptNotFoundError
+            raise errors.PromptNotFoundError(f"Prompt '{prompt_name}' not found in category '{self.category_name}'")
         prompt_data = prompts[0]
         prompt_data['url'] = self.make_prompt_url(prompt_data['id'])
         prompt_data['api_url'] = self.make_prompt_api_url(prompt_data['id'])
