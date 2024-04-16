@@ -236,3 +236,6 @@ else:
     DEBUG = True
 
 CSRF_TRUSTED_ORIGINS = ['http://127.0.0.1:*', 'http://localhost:*']
+
+# tracing logs for prompt
+PROMPT_TRACING_LOG_URL = os.environ.get('PROMPT_TRACING_LOG_URL', '')

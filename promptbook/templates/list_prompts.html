@@ -127,7 +127,21 @@
                       <i class="fas fa-thin fa-copy"></i>
                     </span>
                   </button>
+
+                <!-- Add new button for tracing log -->
+                {% if prompt.tracing_log_url %}
+
+                    <a href="{{ prompt.tracing_log_url }}" class="button is-small has-text-info" style="background-color: #f0f0f0;" target="_blank">
+                        <span class="icon">
+                            <i class="fas fa-stream"></i> <!-- Updated icon -->
+                        </span>
+                        <span>Tracing Log</span>
+                    </a>
+                {% endif %}
             </div>
+
+
+
 
             <hr />
             <!-- 提示文本 -->

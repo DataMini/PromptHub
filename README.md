@@ -66,6 +66,11 @@ prompt_output_format = prompt.output_format
 
 每一个 Prompt 都属于一个项目。创建 Prompt 的时候，可以指定适用的模型，输出格式，也可以为项目打上标签，便于查找和分类。
 
+- 支持设置 Prompt 的Tracing Log URL，方便查看 Prompt 的调用情况
+
+可通过环境变量`PROMPT_TRACING_LOG_URL`设置，其中可使用`{prompt_name}`、`{category_name}`占位符来引用Prompt的名称和分类名称。
+比如：`PROMPT_TRACING_LOG_URL=https://your-prompt-tracing-url/?search={prompt_name}@{category_name}`
+
 
 ## 编辑 Prompt
 <table><tr><td><img src="./screens/edit_prompt_cn.png" alt="Editor"/></td></tr></table>

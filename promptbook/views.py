@@ -2,6 +2,7 @@ import json
 import reversion
 from enum import Enum
 
+from django.conf import settings
 from django.db import transaction, IntegrityError
 from .models import Category, Prompt, Label, LLMModel
 from django.contrib.auth import login as auth_login, logout as auth_logout, authenticate
@@ -67,6 +68,12 @@ def list_prompts(request, category_id):
     category = Category.objects.get(pk=category_id, owner=request.user)
     # Show prompts that belong to the current user
     prompts = category.prompt_set.order_by('name')
+
+    # add tracing log url
+    if settings.PROMPT_TRACING_LOG_URL:
+        for p in prompts:
+            p.tracing_log_url = settings.PROMPT_TRACING_LOG_URL.format(
+                prompt_name=p.name, category_name=p.category.name)
 
     return render(request, 'list_prompts.html', {
         'category': category,
