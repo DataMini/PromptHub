@@ -66,8 +66,21 @@
 
   <h3 class="title is-4" style="margin-bottom: 20px;">{% trans "Category:" %} {{ category.name }}</h3>
 
+
+
+
   <div class="field">
-    <label class="label">{% trans "Prompt Name" %}</label>
+      <div class="label-and-button" style="display: flex; justify-content: space-between; align-items: center;">
+        <label class="label">{% trans "Prompt Name" %}</label>
+        {% if prompt_name and prompt_tracing_log_url %}
+          <a href="{{ prompt_tracing_log_url }}" target="_blank" rel="noopener noreferrer" class="button is-small has-text-info" style="background-color: #f0f0f0; color: rgb(27, 187, 49);">
+            <span class="icon">
+              <i class="fas fa-stream"></i>
+            </span>
+            <span>Tracing Log</span>
+          </a>
+        {% endif %}
+      </div>
     <div class="control">
       <input class="input" type="text" placeholder="{% trans 'Add prompt name here...' %}" name="prompt_name" value="{% if prompt_name %}{{ prompt_name }}{% endif %}" required>
     </div>

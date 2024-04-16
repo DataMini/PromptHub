@@ -36,6 +36,9 @@ from rest_framework import status
 from rest_framework.reverse import reverse as drf_reverse
 
 
+def get_prompt_tracing_log_url(prompt_name, category_name):
+    return settings.PROMPT_TRACING_LOG_URL.format(
+        prompt_name=prompt_name, category_name=category_name)
 
 class PrompVisibility(Enum):
     yes = 'yes'
@@ -72,8 +75,7 @@ def list_prompts(request, category_id):
     # add tracing log url
     if settings.PROMPT_TRACING_LOG_URL:
         for p in prompts:
-            p.tracing_log_url = settings.PROMPT_TRACING_LOG_URL.format(
-                prompt_name=p.name, category_name=p.category.name)
+            p.tracing_log_url = get_prompt_tracing_log_url(p.name, category.name)
 
     return render(request, 'list_prompts.html', {
         'category': category,
@@ -123,6 +125,7 @@ def create_or_edit_prompt(request, category_id, prompt_id=None):
             return render(request, 'create_or_edit_prompt.html', {
                 'category': category,
                 'prompt_name': prompt_name,
+                'prompt_tracing_log_url': get_prompt_tracing_log_url(prompt_name, category.name),
                 'prompt_text': prompt_text,
                 'output_format': selected_output_format,
                 'selected_labels': selected_labels,
@@ -142,6 +145,7 @@ def create_or_edit_prompt(request, category_id, prompt_id=None):
             return render(request, 'create_or_edit_prompt.html', {
                 'category': category,
                 'prompt_name': prompt.name,
+                'prompt_tracing_log_url': get_prompt_tracing_log_url(prompt.name, category.name),
                 'prompt_text': prompt.text,
                 'output_format': prompt.output_format,
                 'selected_labels': prompt.labels.all(),
